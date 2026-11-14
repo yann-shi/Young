@@ -202,7 +202,7 @@ class TopicNewHandler(CommunityBaseHandler):
         response_data = {}
 
         title = form.title.data
-        content = form.content.data
+        content = self.sanitize_html(form.content.data)
         nodes = form.nodes.data.split(',')
         anonymous = form.anonymous.data
 
@@ -354,7 +354,7 @@ class TopicEditHandler(CommunityBaseHandler):
 
         topic_id = form.topic_id.data
         title = form.title.data
-        content = form.content.data
+        content = self.sanitize_html(form.content.data)
         nodes = form.nodes.data.split(',')
         anonymous = form.anonymous.data
 
@@ -411,7 +411,7 @@ class TopicCommentNewHandler(CommunityBaseHandler):
 
         response_data = {}
 
-        content = form.content.data
+        content = self.sanitize_html(form.content.data)
         topic_id = form.topic_id.data
         anonymous = form.anonymous.data
         replyeder_id = form.replyeder_id.data
