@@ -57,6 +57,54 @@ class UtilMixin(object):
             html, "html.parser").get_text().replace(' ', '').replace('\n', '')
         return text
 
+    @classmethod
+    def sanitize_html(cls, html):
+        '''sanitize user-submitted HTML, strip XSS-prone tags/attrs'''
+
+        if not html:
+            return html
+
+        ALLOWED_TAGS = set([
+            'p', 'br', 'hr', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
+            'del', 'sub', 'sup', 'blockquote', 'pre', 'code', 'ul', 'ol',
+            'li', 'dl', 'dt', 'dd', 'a', 'img', 'span', 'div',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption'
+        ])
+        ALLOWED_ATTRS = {
+            'a': set(['href', 'title', 'target', 'rel']),
+            'img': set(['src', 'alt', 'title', 'width', 'height']),
+        }
+        DANGEROUS_TAGS = [
+            'script', 'style', 'iframe', 'object', 'embed', 'applet',
+            'form', 'input', 'button', 'textarea', 'select', 'option',
+            'link', 'meta', 'base', 'svg', 'math', 'frame', 'frameset'
+        ]
+        SAFE_URL = re.compile(r'^\s*(https?:|mailto:|/|#|data:image/)', re.I)
+
+        soup = BeautifulSoup(html, 'html.parser')
+
+        for tag in soup.find_all(DANGEROUS_TAGS):
+            tag.decompose()
+
+        for tag in soup.find_all(True):
+            if tag.name not in ALLOWED_TAGS:
+                tag.unwrap()
+                continue
+
+            allowed = ALLOWED_ATTRS.get(tag.name, set())
+            for attr in list(tag.attrs):
+                value = tag.attrs[attr]
+                if attr.lower().startswith('on') or attr not in allowed:
+                    del tag[attr]
+                elif attr in ('href', 'src'):
+                    if isinstance(value, (list, tuple)):
+                        value = ' '.join(value)
+                    if not SAFE_URL.match(value or ''):
+                        del tag[attr]
+
+        return unicode(soup)
+
     @gen.coroutine
     def get_images(self, html):
         '''从html里边得到所有的图片'''
